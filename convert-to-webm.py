@@ -24,7 +24,8 @@ if args.size is not None:
 
 file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
-out_file_temp = file_path + "_a.webm"
+out_file_audio_temp = file_path + "_a.webm"
+out_file_video_temp = file_path + "_v.webm"
 
 
 def count(g):
@@ -86,7 +87,7 @@ command = \
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
         '-pass', '1',
-        out_file_temp
+        out_file_audio_temp
     ]
 
 print(command)
@@ -107,7 +108,7 @@ def parse_time_to_seconds(s):
     return int(p[0]) * 60 * 60 + int(p[1]) * 60 + int(p[2])
 
 
-audio_size = os.path.getsize(out_file_temp) / 1024  # we want KiB
+audio_size = os.path.getsize(out_file_audio_temp) / 1024  # we want KiB
 length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start) + 1
 
 target_bitrate = (target_size - audio_size) * 8 / length_seconds
@@ -121,22 +122,24 @@ print("Target video bitrate: " + str(target_bitrate_chopped))
 command = \
     [
         'ffmpeg',
-        '-i', input_file_path,
-        '-i', out_file_temp
+        '-i', input_file_path
+        #,
+        #'-i', out_file_temp
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
     [
-        '-map', '0:v',
-        '-map', '1:a',
-        '-c:a', 'copy',
+        #'-map', '0:v',
+        #'-map', '1:a',
+        #'-c:a', 'copy',
         # '-vf', 'scale=500:-1',
+        '-an',
         '-b:v', str(target_bitrate_chopped) + "k",
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
         '-quality', 'best',
         '-pass', '2',
-        out_file
+        out_file_video_temp
     ]
 
 print(command)
@@ -144,5 +147,25 @@ print('running 2nd pass:')
 p = subprocess.Popen(command)
 p.wait()
 
-os.remove(out_file_temp)
+#os.remove(out_file_temp)
 os.remove('ffmpeg2pass-0.log')
+
+# join streams
+
+command = \
+[
+    'ffmpeg',
+    '-i', out_file_video_temp,
+    '-i', out_file_audio_temp,
+    '-c:v', 'copy',
+    '-c:a', 'copy',
+    out_file
+]
+
+print(command)
+print('merging:')
+p = subprocess.Popen(command)
+p.wait()
+
+os.remove(out_file_video_temp)
+os.remove(out_file_audio_temp)
