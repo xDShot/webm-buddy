@@ -9,9 +9,10 @@ target_size = 6144
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', help='input file')
-parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss, optional
-parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to, optional
-parser.add_argument('-size', help='target file size in KiB, default is ' + str(target_size))  # optional
+parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss
+parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to
+parser.add_argument('-size', help='target file size in KiB, default is ' + str(target_size))
+parser.add_argument('-vf', help='video filters (ffmpeg syntax)')
 
 
 
@@ -82,6 +83,7 @@ command = \
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
+    optional_arg('-vf', args.vf) + \
     [
         # '-vf', 'scale=500:-1',
         '-auto-alt-ref', '1',
@@ -128,6 +130,7 @@ command = \
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
+    optional_arg('-vf', args.vf) + \
     [
         #'-map', '0:v',
         #'-map', '1:a',
