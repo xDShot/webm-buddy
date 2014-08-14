@@ -174,6 +174,3 @@ print(command)
 print('merging:')
 p = subprocess.Popen(command)
 p.wait()
-
-os.remove(out_file_video_temp)
-os.remove(out_file_audio_temp)
