@@ -90,7 +90,7 @@ command = \
         '-i', input_file_path
     ] + \
     optional_arg('-i', args.audio) + \
-    not_empty_if(args.audio is not None, ['-map 0:v', '-map 1:a']) + \
+    not_empty_if(args.audio is not None, ['-map', '0:v', '-map', '1:a']) + \
     optional_arg('-q:a', args.aq) + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
