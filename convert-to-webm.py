@@ -13,6 +13,8 @@ parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss
 parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to
 parser.add_argument('-size', help='target file size in KiB, default is ' + str(target_size))
 parser.add_argument('-vf', help='video filters (ffmpeg syntax)')
+parser.add_argument('-audio', help='alternative audio input')
+parser.add_argument('-aq', help='audio quality, 0..9')
 
 
 
@@ -73,19 +75,29 @@ def optional_arg(name, value):
         return [name, value]
     return []
 
+def not_empty_if(p, value):
+    if p:
+        return value
+    return []
+
 # 1st pass
-# ffmpeg -ss 10:00 -i video.mkv -t 2:00 -vf scale=500:-1 -auto-alt-ref 1 -lag-in-frames 20 -pass 1 out-a.webm
+
+
 
 command = \
     [
         'ffmpeg',
         '-i', input_file_path
     ] + \
+    optional_arg('-i', args.audio) + \
+    not_empty_if(args.audio is not None, ['-map 0:v', '-map 1:a']) + \
+    optional_arg('-q:a', args.aq) + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        # '-vf', 'scale=500:-1',
+        '-vcodec', 'libvpx-vp9',
+        '-strict', 'experimental',
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
         '-pass', '1',
@@ -119,28 +131,23 @@ print("Target video bitrate: " + str(target_bitrate_chopped))
 
 # 2nd pass
 
-# ffmpeg -i video.mkv -i out-a.webm -t 2:00  -quality best -pass 2 out.webm
-
 command = \
     [
         'ffmpeg',
         '-i', input_file_path
-        #,
-        #'-i', out_file_temp
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        #'-map', '0:v',
-        #'-map', '1:a',
-        #'-c:a', 'copy',
-        # '-vf', 'scale=500:-1',
+        '-vcodec', 'libvpx-vp9',
+        '-strict', 'experimental',
         '-an',
         '-b:v', str(target_bitrate_chopped) + "k",
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
-        '-quality', 'best',
+        '-quality', 'good',
+        '-cpu-used', '0', 
         '-pass', '2',
         out_file_video_temp
     ]
@@ -150,11 +157,9 @@ print('running 2nd pass:')
 p = subprocess.Popen(command)
 p.wait()
 
-#os.remove(out_file_temp)
 os.remove('ffmpeg2pass-0.log')
 
 # join streams
-
 command = \
 [
     'ffmpeg',
