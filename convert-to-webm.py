@@ -29,6 +29,7 @@ file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
 out_file_audio_temp = file_path + "_a.webm"
 out_file_video_temp = file_path + "_v.webm"
+out_file_1pass_temp = file_path + "_dummy.webm"
 
 
 def count(g):
@@ -130,7 +131,7 @@ command = \
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
         '-pass', '1',
-        '/dev/null'
+        out_file_1pass_temp
     ]
 
 print(command)
