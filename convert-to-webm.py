@@ -29,6 +29,7 @@ file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
 out_file_audio_temp = file_path + "_a.webm"
 out_file_video_temp = file_path + "_v.webm"
+out_file_1pass_temp = file_path + "_dummy.webm"
 
 
 def count(g):
@@ -80,8 +81,40 @@ def not_empty_if(p, value):
         return value
     return []
 
-# 1st pass
+def parse_time_to_seconds(s):
+    """
+    @type s: string
+    """
+    p = s.split(sep=':')
+    p[-1] = p[-1].split(sep='.', maxsplit=1)[0]
+    return int(p[0]) * 60 * 60 + int(p[1]) * 60 + int(p[2])
 
+length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start)
+
+# audio
+
+audio_source = args.audio or input_file_path
+
+audio_time_args = \
+    optional_arg('-ss', args.start) + \
+    optional_arg('-to', args.end) if args.audio is None else \
+    ['-to', str(length_seconds)]
+
+command = \
+    [
+        'ffmpeg',
+        '-i', audio_source
+    ] + \
+    optional_arg('-q:a', args.aq) + \
+    audio_time_args + \
+    [out_file_audio_temp]
+
+print(command)
+print('running audio pass:')
+p = subprocess.Popen(command)
+p.wait()
+
+# 1st pass
 
 
 command = \
@@ -89,19 +122,16 @@ command = \
         'ffmpeg',
         '-i', input_file_path
     ] + \
-    optional_arg('-i', args.audio) + \
-    not_empty_if(args.audio is not None, ['-map', '0:v', '-map', '1:a']) + \
-    optional_arg('-q:a', args.aq) + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        '-vcodec', 'libvpx-vp9',
+        '-vcodec', 'libvpx',
         '-strict', 'experimental',
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
         '-pass', '1',
-        out_file_audio_temp
+        out_file_1pass_temp
     ]
 
 print(command)
@@ -113,17 +143,9 @@ p.wait()
 # bitrate = (filesize - audio_size) * 8bit / time
 # (6144 - 1532)KiB * 8bit / 120sec = 307kbit/s
 
-def parse_time_to_seconds(s):
-    """
-    @type s: string
-    """
-    p = s.split(sep=':')
-    p[-1] = p[-1].split(sep='.', maxsplit=1)[0]
-    return int(p[0]) * 60 * 60 + int(p[1]) * 60 + int(p[2])
-
 
 audio_size = os.path.getsize(out_file_audio_temp) / 1024  # we want KiB
-length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start) + 1
+
 
 target_bitrate = (target_size - audio_size) * 8 / length_seconds
 target_bitrate_chopped = int(target_bitrate)
@@ -140,7 +162,7 @@ command = \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        '-vcodec', 'libvpx-vp9',
+        '-vcodec', 'libvpx',
         '-strict', 'experimental',
         '-an',
         '-b:v', str(target_bitrate_chopped) + "k",
