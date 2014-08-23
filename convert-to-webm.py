@@ -5,7 +5,7 @@ import itertools
 import os
 
 
-target_size = 14336 
+target_size = 13781 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', help='input file')
@@ -23,7 +23,7 @@ args = parser.parse_args()
 input_file_path = args.i
 
 if args.size is not None:
-    target_size = args.size
+    target_size = int(args.size)
 
 file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
