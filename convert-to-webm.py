@@ -5,7 +5,7 @@ import itertools
 import os
 
 
-target_size = 6144
+target_size = 14336 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', help='input file')
@@ -27,7 +27,7 @@ if args.size is not None:
 
 file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
-out_file_audio_temp = file_path + "_a.webm"
+out_file_audio_temp = file_path + "_a.ogg"
 out_file_video_temp = file_path + "_v.webm"
 out_file_1pass_temp = file_path + "_dummy.webm"
 
@@ -103,7 +103,9 @@ audio_time_args = \
 command = \
     [
         'ffmpeg',
-        '-i', audio_source
+        '-i', audio_source,
+        '-vn',
+        '-acodec', 'libvorbis'
     ] + \
     optional_arg('-q:a', args.aq) + \
     audio_time_args + \
@@ -120,7 +122,8 @@ p.wait()
 command = \
     [
         'ffmpeg',
-        '-i', input_file_path
+        '-i', input_file_path,
+        '-an'
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
@@ -189,6 +192,7 @@ command = \
     '-i', out_file_audio_temp,
     '-c:v', 'copy',
     '-c:a', 'copy',
+    '-fs', str(target_size) + 'k',
     out_file
 ]
 
