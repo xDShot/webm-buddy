@@ -10,5 +10,6 @@ Requires that you have ffmpeg with libvpx and libvorbis.
 TODO
 ====
 
-* Support videos where number of audio tracks is not 1, allow choosing track and encoding without any audio.
-* Nicer feedback.
+* Support videos where number of audio tracks is not 1 or 0;
+* Nicer feedback;
+* Multi-segment cutting.
