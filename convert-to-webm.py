@@ -56,7 +56,7 @@ def is_audio(stream_info):
 file_info = probe_file(input_file_path)
 
 streams = file_info['streams']
-total_duration = file_info['duration']
+total_duration = file_info['format']['duration']
 
 audio_streams_count = count(itertools.filterfalse(lambda x: not is_audio(x), streams))
 
