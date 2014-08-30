@@ -120,7 +120,7 @@ if has_audio:
             [
                 'ffmpeg',
                 '-i', audio_source,
-                '-vn',
+                '-vn', '-sn',
                 '-acodec', 'copy'
             ] + \
             audio_time_args + \
@@ -149,7 +149,7 @@ command = \
     [
         'ffmpeg',
         '-i', input_file_path,
-        '-an'
+        '-an', '-sn'
     ] + \
     optional_arg('-ss', args.start) + \
     optional_arg('-to', args.end) + \
@@ -190,7 +190,7 @@ command = \
     [
         '-vcodec', 'libvpx',
         '-strict', 'experimental',
-        '-an',
+        '-an', '-sn',
         '-b:v', str(target_bitrate_chopped) + "k",
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
