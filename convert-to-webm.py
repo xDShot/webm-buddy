@@ -13,6 +13,7 @@ parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss
 parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to
 parser.add_argument('-size', help='target file size in KiB, default is ' + str(target_size))
 parser.add_argument('-vf', help='video filters (ffmpeg syntax)')
+parser.add_argument('-noaudio', action="store_true", default=False, help='do not add audio stream into output WebM')
 parser.add_argument('-audio', help='alternative audio input')
 parser.add_argument('-aq', help='audio quality, 0..9')
 
@@ -104,7 +105,7 @@ else:
     length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start)
 
 # audio
-has_audio = (args.audio is not None) or (audio_streams_count > 0)
+has_audio = args.noaudio is False and ((args.audio is not None) or (audio_streams_count > 0))
 
 if has_audio:
 
