@@ -7,7 +7,7 @@ import os
 
 target_size = 10000
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description='Some bydlo-code to make creating WebM files easier.')
 parser.add_argument('-i', help='input file')
 parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss
 parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to
