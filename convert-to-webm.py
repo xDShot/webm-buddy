@@ -5,7 +5,7 @@ import itertools
 import os
 
 
-target_size = 13000
+target_size = 10000
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', help='input file')
