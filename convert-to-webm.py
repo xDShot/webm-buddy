@@ -9,7 +9,7 @@ target_size = 10000
 
 parser = argparse.ArgumentParser(description='Some bydlo-code to make creating WebM files easier.')
 parser.add_argument('-i', help='input file')
-parser.add_argument('-p', help='add preview image into first frame')
+parser.add_argument('-p', help='add preview image into first frame. Requires mkvmerge')
 parser.add_argument('-start', help='start time (optional), HH:MM:SS.xxx')  # -ss
 parser.add_argument('-end', help='end time (optional), HH:MM:SS.xxx')  # -to
 parser.add_argument('-size', help='target file size in KiB, default is ' + str(target_size))
@@ -29,6 +29,7 @@ if args.size is not None:
 file_path, file_ext = os.path.splitext(input_file_path)
 out_file = file_path + "_converted.webm"
 out_file_pic_temp = file_path + "_pic.webm"
+out_file_picvid_temp = file_path + "_picvid.webm"
 out_file_audio_temp = file_path + "_a.ogg"
 out_file_video_temp = file_path + "_v.webm"
 out_file_1pass_temp = file_path + "_dummy.webm"
@@ -107,23 +108,6 @@ elif args.start is None:
 else:
     length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start)
 
-# preview
-has_preview = input_preview_path is not None
-
-if has_preview:
-    command = \
-        [
-            'ffmpeg',
-            '-i', input_preview_path,
-            '-an', '-sn',
-            '-c:v', 'libvpx',
-            out_file_pic_temp
-        ]
-
-    print(command)
-    print('creating preview:')
-    p = subprocess.Popen(command)
-    p.wait()
 
 # audio
 has_audio = args.noaudio is False and ((args.audio is not None) or (audio_streams_count > 0))
@@ -229,51 +213,75 @@ p.wait()
 
 os.remove('ffmpeg2pass-0.log')
 
-# join streams
+# preview
+has_preview = input_preview_path is not None
 
-if has_preview and has_audio:
+if has_preview:
     command = \
         [
-            'ffmpeg', 
-            '-i', out_file_pic_temp,'-i', out_file_video_temp,'-i', out_file_audio_temp,
-            '-c:v', 'copy',
-            '-c:a', 'copy',
-            '-fs', str(target_size) + 'k',
-            out_file
+            'ffmpeg',
+            '-i', input_preview_path,
+            '-vcodec', 'libvpx',
+            # '-strict', 'experimental',
+            '-an', '-sn',
+            '-b:v', str(target_bitrate_chopped) + "k",
+            '-auto-alt-ref', '1',
+            '-lag-in-frames', '20',
+            '-quality', 'good',
+            '-cpu-used', '0',
+            out_file_pic_temp
         ]
-elif has_preview and has_audio is False:
+
+    print(command)
+    print('creating preview:')
+    p = subprocess.Popen(command)
+    p.wait()
+
+# join streams
+
+# preview + vid
+if has_preview:
     command = \
-    [
-            'ffmpeg', 
-            '-i', out_file_pic_temp,'-i', out_file_video_temp,
-            '-c:v', 'copy',
-            '-c:a', 'copy',
-            '-fs', str(target_size) + 'k',
-            out_file
-    ]
-elif has_preview is False and has_audio:
-    command = \
-    [
-            'ffmpeg', 
-            '-i', out_file_video_temp,'-i', out_file_audio_temp,
-            '-c:v', 'copy',
-            '-c:a', 'copy',
-            '-fs', str(target_size) + 'k',
-            out_file
-    ]
+        [
+            'mkvmerge',
+            out_file_pic_temp, '+', out_file_video_temp,
+            '-o', out_file_picvid_temp
+        ]
+    
+    print(command)
+    print('merging preview and video:')
+    p = subprocess.Popen(command)
+    p.wait()
+
+    if has_audio:
+        command = \
+            [
+                    'ffmpeg', 
+                    '-i', out_file_picvid_temp,'-i', out_file_audio_temp,
+                    '-c:v', 'copy',
+                    '-c:a', 'copy',
+                    '-fs', str(target_size) + 'k',
+                    out_file
+            ]
+        print(command)
+        print('merging audio:')
+        p = subprocess.Popen(command)
+        p.wait()
+# no preview
 else:
-    command = \
-    [
-            'ffmpeg', 
-            '-i', out_file_video_temp,
-            '-c:v', 'copy',
-            '-c:a', 'copy',
-            '-fs', str(target_size) + 'k',
-            out_file
-    ]
+    if has_audio:
+        command = \
+            [
+                    'ffmpeg', 
+                    '-i', out_file_video_temp,'-i', out_file_audio_temp,
+                    '-c:v', 'copy',
+                    '-c:a', 'copy',
+                    '-fs', str(target_size) + 'k',
+                    out_file
+            ]
+        print(command)
+        print('merging audio:')
+        p = subprocess.Popen(command)
+        p.wait()
 
-
-print(command)
-print('merging:')
-p = subprocess.Popen(command)
-p.wait()
+print('Done.')
