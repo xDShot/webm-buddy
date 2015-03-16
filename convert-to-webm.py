@@ -5,7 +5,7 @@ import itertools
 import os
 
 
-target_size = 10000
+target_size = 9.9 * 1024
 
 parser = argparse.ArgumentParser(description='Some bydlo-code to make creating WebM files easier.')
 parser.add_argument('-i', help='input file')
@@ -16,7 +16,10 @@ parser.add_argument('-size', help='target file size in KiB, default is ' + str(t
 parser.add_argument('-vf', help='video filters (ffmpeg syntax)')
 parser.add_argument('-noaudio', action="store_true", default=False, help='do not add audio stream into output WebM')
 parser.add_argument('-audio', help='alternative audio input')
+parser.add_argument('-vcodec', help='override video codec')
 parser.add_argument('-aq', help='audio quality, 0..9')
+parser.add_argument('-b', help='limit (average) video bitrate')
+parser.add_argument('-notrim', action='store_true', help='don\'t trim audio end')
 
 args = parser.parse_args()
 
@@ -34,6 +37,7 @@ out_file_audio_temp = file_path + "_a.ogg"
 out_file_video_temp = file_path + "_v.webm"
 out_file_1pass_temp = file_path + "_dummy.webm"
 
+video_codec = args.vcodec or 'libvpx'
 
 def count(g):
     return sum(1 for x in g)
@@ -108,7 +112,6 @@ elif args.start is None:
 else:
     length_seconds = parse_time_to_seconds(args.end) - parse_time_to_seconds(args.start)
 
-
 # audio
 has_audio = args.noaudio is False and ((args.audio is not None) or (audio_streams_count > 0))
 
@@ -116,10 +119,13 @@ if has_audio:
 
     audio_source = args.audio or input_file_path
 
-    audio_time_args = \
-        optional_arg('-ss', args.start) + \
+    audio_start = optional_arg('-ss', args.start)
+
+    audio_end = [] if args.notrim else \
         optional_arg('-to', args.end) if args.audio is None else \
             ['-to', str(length_seconds)]
+
+    audio_time_args = audio_start + audio_end
 
     if args.aq == 'copy':
         command = \
@@ -137,7 +143,8 @@ if has_audio:
                 'ffmpeg',
                 '-i', audio_source,
                 '-vn',
-                '-acodec', 'libvorbis'
+                '-acodec', 'libvorbis',
+                '-ac', '2'
             ] + \
             optional_arg('-q:a', args.aq) + \
             audio_time_args + \
@@ -161,7 +168,7 @@ command = \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        '-vcodec', 'libvpx',
+        '-vcodec', video_codec,
         '-strict', 'experimental',
         '-auto-alt-ref', '1',
         '-lag-in-frames', '20',
@@ -180,7 +187,15 @@ else:
     audio_size = 0
 
 target_bitrate = (target_size - audio_size) * 8 / length_seconds
+
+if args.b:
+    bitrate_limit = int(args.b)
+    if 0 < bitrate_limit < target_bitrate:
+        target_bitrate = bitrate_limit
+
 target_bitrate_chopped = int(target_bitrate)
+
+
 print("Target video bitrate: " + str(target_bitrate_chopped))
 
 # 2nd pass
@@ -194,7 +209,7 @@ command = \
     optional_arg('-to', args.end) + \
     optional_arg('-vf', args.vf) + \
     [
-        '-vcodec', 'libvpx',
+        '-vcodec', video_codec,
         '-strict', 'experimental',
         '-an', '-sn',
         '-b:v', str(target_bitrate_chopped) + "k",
@@ -221,7 +236,7 @@ if has_preview:
         [
             'ffmpeg',
             '-i', input_preview_path,
-            '-vcodec', 'libvpx',
+            '-vcodec', video_codec,
             # '-strict', 'experimental',
             '-an', '-sn',
             '-b:v', str(target_bitrate_chopped) + "k",
